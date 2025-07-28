@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "RankingPilotos/1.0.0": {
+        "runtime": {
+          "RankingPilotos.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RankingPilotos/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
