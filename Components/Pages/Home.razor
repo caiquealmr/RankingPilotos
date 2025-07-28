@@ -1,0 +1,191 @@
+﻿@page "/"
+@using RankingPilotos.Models
+@using RankingPilotos.Services
+@inject PilotService PilotService
+
+<div class="container">
+  <header class="racing-header">
+    <div class="header-content">
+      <h1 class="main-title">🏎️ Pilotos em Destaque</h1>
+    </div>
+  </header>
+
+  <section class="filter-panel">
+    <div class="filter-header">
+      <h3>Filtros</h3>
+    </div>
+
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label>Categoria</label>
+        <select class="form-select" @onchange="OnCategoriaChanged">
+          <option value="">Todas</option>
+          @foreach (var cat in Enum.GetValues<Categoria>())
+          {
+            <option value="@cat.ToString()" selected="@(cat.ToString() == categoriaSelecionadaString)">@cat.ToString()</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Sexo</label>
+        <select class="form-select" @onchange="OnSexoChanged">
+          <option value="">Todos</option>
+          @foreach (var sexo in Enum.GetValues<Sexo>())
+          {
+            <option value="@sexo.ToString()" selected="@(sexo.ToString() == sexoSelecionadoString)">@sexo.ToString()</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Classe de Peso</label>
+        <select class="form-select" @onchange="OnPesoChanged">
+          <option value="">Todas</option>
+          @foreach (var peso in PilotService.GetUniqueClassesPeso())
+          {
+            <option value="@peso" selected="@(peso == pesoSelecionado)">@peso</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Traçado</label>
+        <select class="form-select" @onchange="OnTracadoChanged">
+          <option value="">Todos</option>
+          @foreach (var tracado in PilotService.GetUniqueTracados())
+          {
+            <option value="@tracado" selected="@(tracado == tracadoSelecionado)">@tracado</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Busca</label>
+        <input class="form-control" type="text" placeholder="Nome ou Equipe" value="@searchTerm" @oninput="OnSearchTermChanged" />
+      </div>
+    </div>
+  </section>
+
+  @if (groupedPilots.Any())
+  {
+    <div class="cards-grid">
+      @foreach (var grupo in groupedPilots)
+      {
+        <div class="pilot-card @(GetCategoryCssClass(grupo.Value.First().Categoria))">
+          <div class="card-header">
+            <div class="card-title-section">
+              <h4 class="group-title">@grupo.Key</h4>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="pilot-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Equipe</th>
+                  <th>Melhor Volta</th>
+                  <th>Peso</th>
+                  <th>Nacionalidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var piloto in grupo.Value)
+                {
+                  <tr class="pilot-row">
+                    <td><span class="pilot-name">@piloto.Nome</span></td>
+                    <td><span class="team-name">@piloto.Equipe</span></td>
+                    <td class="best-time"><span class="time-value">@piloto.MelhorVoltaFormatada</span></td>
+                    <td>
+                      <span class="weight-badge @(piloto.ClassePeso switch
+                      {
+                          "Leve" => "weight-light",
+                          "Médio" => "weight-medium",
+                          _ => "weight-heavy"
+                      })">
+                        @piloto.ClassePeso
+                      </span>
+                    </td>
+                    <td>@piloto.Nacionalidade</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+  }
+  else
+  {
+    <p>Nenhum piloto encontrado com os filtros aplicados.</p>
+  }
+</div>
+
+@code {
+    private string? categoriaSelecionadaString;
+    private string? sexoSelecionadoString;
+    private string? pesoSelecionado;
+    private string? tracadoSelecionado;
+    private string? searchTerm;
+
+    private Dictionary<string, List<Pilot>> groupedPilots = new();
+
+    private Categoria? categoriaSelecionada =>
+        Enum.TryParse<Categoria>(categoriaSelecionadaString, out var cat) ? cat : null;
+
+    private Sexo? sexoSelecionado =>
+        Enum.TryParse<Sexo>(sexoSelecionadoString, out var sex) ? sex : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AtualizarRanking();
+    }
+
+    private async Task AtualizarRanking()
+    {
+        groupedPilots = await PilotService.GetGroupedPilotsAsync(
+            categoriaSelecionada,
+            sexoSelecionado,
+            pesoSelecionado,
+            tracadoSelecionado,
+            searchTerm);
+    }
+
+    private async Task OnCategoriaChanged(ChangeEventArgs e)
+    {
+        categoriaSelecionadaString = e.Value?.ToString();
+        await AtualizarRanking();
+    }
+
+    private async Task OnSexoChanged(ChangeEventArgs e)
+    {
+        sexoSelecionadoString = e.Value?.ToString();
+        await AtualizarRanking();
+    }
+
+    private async Task OnPesoChanged(ChangeEventArgs e)
+    {
+        pesoSelecionado = e.Value?.ToString();
+        await AtualizarRanking();
+    }
+
+    private async Task OnTracadoChanged(ChangeEventArgs e)
+    {
+        tracadoSelecionado = e.Value?.ToString();
+        await AtualizarRanking();
+    }
+
+    private async Task OnSearchTermChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString();
+        await AtualizarRanking();
+    }
+
+    private string GetCategoryCssClass(Categoria categoria) => categoria switch
+    {
+        Categoria.Formula1 => "formula1-card",
+        Categoria.Rally => "rally-card",
+        Categoria.IndyCar => "indycar-card",
+        Categoria.StockCar => "stockcar-card",
+        Categoria.Endurance => "endurance-card",
+        Categoria.Kart => "kart-card",
+        _ => ""
+    };
+}
